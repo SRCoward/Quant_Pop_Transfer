@@ -1,7 +1,9 @@
 # Quant_Pop_Transfer
 MPhil Mini Project 2: Simulating a Quantum Algorithm for Population Transfer via Non-Ergodic Extended States for Molecular Dynamics
 
-Here is where I shall develop the second mini project on using the quantum population transfer protocol as a subprocess of a quantum parallel tempering algorithm.
+Here is where I shall develop the second mini project on using the quantum population transfer protocol as a subprocess of a quantum parallel tempering algorithm. 
+
+Main Reference: https://arxiv.org/pdf/1807.04792.pdf
 
 The report should contain the following:
 
