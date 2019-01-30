@@ -5,9 +5,17 @@ from numpy import linalg
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
 from qiskit import execute
 # Import Aer
-from qiskit import BasicAer
+from qiskit import BasicAer, compile
+# Import Aqua
+from qiskit_aqua.algorithms import EOH
+from qiskit_aqua import Operator, QuantumInstance
+from qiskit_aqua.components.initial_states import Zero
 
-
+from qiskit.transpiler import PassManager
+from qiskit_aqua import get_aer_backend
+from qiskit.qobj._qobj import QobjConfig
+#from test.common import QiskitAquaTestCase
+from qiskit_aqua import Operator, QuantumInstance
 
 """
 Hamiltonian computes the hamiltionian with which we will evolve the system
@@ -99,7 +107,7 @@ def generate_driver_eigenstates(n, bit_strings):
         # Create a Quantum Program for execution
         job = execute(circ, backend)
         result = job.result()
-        state = result.get_statevector(circ, decimals=3) #get the resulting state vector
+        state = result.get_statevector(circ, decimals=3) # get the resulting state vector
         outputstate[row][0] = sum
         outputstate[row][1:2**n+1] = state.real # the row is an evec with eval sum
 
@@ -119,20 +127,32 @@ def generate_driver_eigenstates(n, bit_strings):
 def trotter_time_step(n, M, dt, classical_eigenstates, driver_eigenstates,initial_state, field_strength):
     update = np.zeros(2**n,dtype=complex)
     state_nums = classical_eigenstates[0:4, 0]  # length M vector
-    #WHAT ABOUT B_PERP SAM WHAT ABOUT THAT VERY IMPORTANT FACTOR YOU LEFT OUT!
+
     for i in range(0, 2**n):
         for k in range(0, 2**n):
             lambda_k_D = driver_eigenstates[k][0] # eval of kth estate of Driver
 
             vec_k_D = driver_eigenstates[k][1:2**n+1]
-            #print("driver estate number k=",k, "state =", vec_k_D, "eval =", lambda_k_D)
+            # print("driver estate number k=",k, "state =", vec_k_D, "eval =", lambda_k_D)
             dot_product = np.dot(vec_k_D, initial_state)
             update[i] += np.exp(dt*complex(0, 1)*lambda_k_D*field_strength)*vec_k_D[i]*dot_product
         for k in range(0, len(state_nums)):
 
             if state_nums[k] == i:
-                #print("classical eval", k, " value is", classical_eigenstates[k][1])
+                # print("classical eval", k, " value is", classical_eigenstates[k][1])
                 update[i]*=np.exp(-dt*classical_eigenstates[k][1]*complex(0,1))
     return update
 
+"""
+lam_plus = (-1+np.sqrt(5))/2
+lam_minus = (-1-np.sqrt(5))/2
+output0 = ((1+0.25*lam_minus**2)**(-1))*np.exp(-complex(0,lam_minus))
+output0 += ((1+0.25*lam_plus**2)**(-1))*np.exp(-complex(0,lam_plus))
+print(output0)
 
+output1 = [np.exp(complex(0,1))*np.cos(2), np.sin(2)]
+print(output1)
+
+
+
+"""
