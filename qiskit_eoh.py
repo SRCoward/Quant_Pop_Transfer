@@ -1,39 +1,38 @@
 import time
-
-
 import numpy as np
-
-#from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
-#from qiskit import execute
-# Import Aer
-start_import = time.time()
-from qiskit import BasicAer, compile
 import matplotlib.pyplot as plt
-#from qiskit.quantum_info.operators.pauli import Pauli
 
-from qiskit_aqua.algorithms import EOH
-end_import = time.time()
-#from qiskit_aqua import Operator, QuantumInstance
-from qiskit_aqua.components.initial_states import Zero
-
+# Import qiskit to compile/run
+from qiskit import LegacySimulators
 from qiskit.transpiler import PassManager
-#from qiskit_aqua import get_aer_backend
-from qiskit.qobj._qobj import QobjConfig
-#from test.common import QiskitAquaTestCase
-from qiskit_aqua import Operator, QuantumInstance
 
-from hamiltonian import generate_classical_eigen, generate_epsilon, generate_marked_states
+# Import qiskit_aqua classes etc
+from qiskit_aqua import run_algorithm
+from qiskit_aqua.operator import Operator, QuantumInstance
+from qiskit_aqua.algorithms import EOH
+from qiskit_aqua.components.initial_states import Custom
+from qiskit_aqua.input import EnergyInput
+from qiskit_aqua.components.initial_states import Zero
+from qiskit.result.result import Result
 
-
+# Get generator functions from other hamiltonian.py file
+from hamiltonian import generate_marked_states, generate_epsilon, generate_classical_eigen
 """
-Let's try a qiskit evolution
+We use the qiskit eoh.py algorithm to evolve some given initial state with our hamiltonian
+We measure with the classical hamiltonian component at the end of the evolution
+The idea is to implement the Population Transfer protocol introduced in https://arxiv.org/pdf/1807.04792.pdf
+In particular we investigate the impurity band model in this file. 
 """
+
+
+# The driver hamiltonian is a sum of pauli X operators on each qubit
 # \param n number of qubits
+# returns a 2**n by 2**n matrix representing the driver hamiltonian
 def generate_driver_ham(n):
-
     X = [[0,1],[1,0]]
     I = np.identity(2)
     driver = np.zeros((2**n,2**n))
+    # we sum operators of the form I x I x ... x X x ... x I where the X moves along each time
     for i in range(0, n):
         if i == 0:
             hold = X
@@ -46,6 +45,13 @@ def generate_driver_ham(n):
                 hold = np.kron(hold,I)
         driver += hold
     return driver
+
+
+# The classical hamiltonian can be found in the introduction of https://arxiv.org/pdf/1807.04792.pdf
+# Diagonal hamiltonian with only M non-zero diagonal entries which are approx equal to -n with some noise
+# \param n is number of bits
+# \param M is number of marked states
+# \param classical_eigenstates a M x 2^n +1 matrix of evecs of driver ham with evals in col 0
 def generate_classical_ham(n,M,classical_estates):
     classic = np.zeros((2**n,2**n))
     for i in range(0,M):
@@ -54,27 +60,109 @@ def generate_classical_ham(n,M,classical_estates):
     return classic
 
 
+# Here we implement the evolution and measurement with the hamiltonians constructed above
+# \param n is number of bits
+# \param M is number of marked states
+# \param W is the width of the impurity ban
+# \param driver_strength is the strength of the transverse field H = H_cl - driver_strength*H_d
+# \param marked_states is a matrix of the states which have non-zero classical energies (ie in the impurity band)
+def run_evolution(n, M, W, driver_strength, marked_states):
+    epsilon = generate_epsilon(M, W) # generate the noise
+    classical_estates = generate_classical_eigen(n,M,marked_states,epsilon)
+    classical = generate_classical_ham(n,M,classical_estates)
+    driver = generate_driver_ham(n)
+    # Construct the classical operator object which we measure with at the end
+    qubit_op = Operator(matrix=classical)
+    # Construct the evolution operator object which we evolve with
+    evo_op = Operator(matrix=(classical-driver_strength*driver))
+    # Construct the initial state (first marked state a good choice as must start in marked state)
+    state = classical_estates[0][2:2+2**n]
+    print("initial state of the evolution =", state)
+    initial_state = Custom(n,'uniform',state)
+    #initial_state = Zero(n)
+    evo_time = 10 # evolution time needs to be set sufficiently large
+    num_time_slices = 100
+
+    # expansion order can be toggled in order to speed up calculations
+    # Compute the evolution circuit
+    eoh = EOH(qubit_op,initial_state,evo_op, 'paulis', evo_time,num_time_slices,expansion_mode='suzuki',expansion_order=1)
+    backend = LegacySimulators.get_backend('statevector_simulator') # only the statevector_simulator works
+    quantum_instance = QuantumInstance(backend, pass_manager=PassManager())
+    # Execute our particular circuit
+    result = eoh.run(quantum_instance) # this is where all the time cost is!
+    # result is a tuple of outputs one just the average of the outcome the other the whole output
+    ret = result[1]
+    print('The result is\n{}'.format(ret))
+    result = result[0] # get the state vector from this entry
+    result_data_vec = result.results[0]  # need to go through a lot of layers to get to the vector
+    update = result_data_vec.data.statevector  # output state vector at the end of the evolution
+    print("updated state vector = ",update)
+    norm = np.linalg.norm(update)
+    if norm > 0:
+        update = update / norm  # normalise if needed
+    update = np.abs(update)
+    update = update**2  # set update to be a vector of probabilities
+    # compare just highlights all the marked states for comparison in a plot later produced
+    compare = np.sum(classical_estates, axis=0)
+    compare = compare[2:len(compare)]
+    """
+    plt.bar(range(2 ** n), compare)
+    plt.bar(range(2 ** n), update)
+    plt.show()
+    """
+    return update
 
 
-def generate_driver_ham_2(n):
-    driver = np.zeros((2**n,2**n))
-    for i in range(0,2**n):
-        driver[(2**n)-i-1][i] = 1
-    return driver
+n=2
+M=2
+N=10
+states = []
+marked_states = generate_marked_states(n, M)
+for state in marked_states:
+    states.append(int(state,2))
+print(states)
+update = 0
+start_evol = time.time()
+update = run_evolution(n, M, 0.1, 5, marked_states)
+end_evol = time.time()
+
+for i in range(0, N):
+    update += (run_evolution(n, M, 0.1, 2, marked_states))/N
+
+print(" evol time = ",end_evol-start_evol)
+
+plt.bar(range(2 ** n), update)
+plt.show()
 
 """
-for i in range(1,4):
-    print(generate_driver_ham(i)-generate_driver_ham_2(i))
+AN ALTERNATIVE WAY TO INITIALISE THE ALGORITHM
+
+params = {
+    'problem': {
+        'name': 'eoh'
+    },
+    'algorithm': {
+        'name': 'EOH',
+        'num_time_slices': 1
+    },
+    'initial_state': {
+        'name': 'CUSTOM',
+        'state': 'uniform'
+    }
+}
+algo_input = EnergyInput(qubit_op)
+algo_input.add_aux_op(evo_op)
 
 
-print(generate_driver_ham(3))
-print(generate_driver_ham_2(3))
-
+ret = run_algorithm(params, algo_input, backend=backend)
+print('The result is\n{}'.format(ret))
 """
 
 
 
 """
+
+HERE IS SOME STUFF THAT I TRIED BUT IT DIDN'T REALLY WORK
 PARAMS
 start_setup = time.time()
 n=4

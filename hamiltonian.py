@@ -1,21 +1,13 @@
 from random import randint, uniform
 
 import numpy as np
-from numpy import linalg
-from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
+
+from qiskit import QuantumCircuit, QuantumRegister
 from qiskit import execute
 # Import Aer
-from qiskit import BasicAer, compile
-# Import Aqua
-from qiskit_aqua.algorithms import EOH
-from qiskit_aqua import Operator, QuantumInstance
-from qiskit_aqua.components.initial_states import Zero
+from qiskit import BasicAer
+import matplotlib.pyplot as plt
 
-from qiskit.transpiler import PassManager
-from qiskit_aqua import get_aer_backend
-from qiskit.qobj._qobj import QobjConfig
-#from test.common import QiskitAquaTestCase
-from qiskit_aqua import Operator, QuantumInstance
 
 """
 Hamiltonian computes the hamiltionian with which we will evolve the system
@@ -143,16 +135,39 @@ def trotter_time_step(n, M, dt, classical_eigenstates, driver_eigenstates,initia
                 update[i]*=np.exp(-dt*classical_eigenstates[k][1]*complex(0,1))
     return update
 
-"""
-lam_plus = (-1+np.sqrt(5))/2
-lam_minus = (-1-np.sqrt(5))/2
-output0 = ((1+0.25*lam_minus**2)**(-1))*np.exp(-complex(0,lam_minus))
-output0 += ((1+0.25*lam_plus**2)**(-1))*np.exp(-complex(0,lam_plus))
-print(output0)
-
-output1 = [np.exp(complex(0,1))*np.cos(2), np.sin(2)]
-print(output1)
 
 
+# evolves the initial state via trotter for num_steps at step size dt
+# \param dt is the time step size
+# \param n is number of bits
+# \param M is number of marked states
+# \param num_steps is the max number of step (integer)
+# \param W is the width of the impurity band
+def evolve_state(n, M, dt, num_steps, W, field_strength):
+    marked_states = generate_marked_states(n, M)
+    epsilon = generate_epsilon(M, W)
+    classical_estates = generate_classical_eigen(n, M, marked_states, epsilon)
+    bit_strings = generate_bit_strings(n)
 
-"""
+    driver_estates = generate_driver_eigenstates(n, bit_strings)
+    initial_state = classical_estates[0]
+    print("start state=", initial_state[0])
+    initial_state = initial_state[2:len(initial_state)]
+    print("marked states=", classical_estates[0:M,0])
+    update = []
+    for i in range(0, num_steps):
+        update = trotter_time_step(n, M, dt, classical_estates, driver_estates, initial_state, field_strength)
+    norm = np.linalg.norm(update)
+    if norm > 0:
+        update = update / norm
+    update = np.abs(update)
+    compare = np.sum(classical_estates,axis=0)
+    compare = compare[2:len(compare)]
+    update=update**2
+    #print(compare)
+    plt.bar(range(2**n),compare)
+    plt.bar(range(2 ** n), update)
+
+    plt.show()
+
+    return update
