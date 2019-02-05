@@ -16,7 +16,7 @@ from qiskit_aqua.components.initial_states import Zero
 from qiskit.result.result import Result
 
 # Get generator functions from other hamiltonian.py file
-from hamiltonian import generate_marked_states, generate_epsilon, generate_classical_eigen
+from IB_hamiltonian import generate_marked_states, generate_epsilon, generate_classical_eigen
 """
 We use the qiskit eoh.py algorithm to evolve some given initial state with our hamiltonian
 We measure with the classical hamiltonian component at the end of the evolution
@@ -70,6 +70,7 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     epsilon = generate_epsilon(M, W) # generate the noise
     classical_estates = generate_classical_eigen(n,M,marked_states,epsilon)
     classical = generate_classical_ham(n,M,classical_estates)
+    print(classical)
     driver = generate_driver_ham(n)
     # Construct the classical operator object which we measure with at the end
     qubit_op = Operator(matrix=classical)
@@ -80,14 +81,24 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     print("initial state of the evolution =", state)
     initial_state = Custom(n,'uniform',state)
     #initial_state = Zero(n)
-    evo_time = 10 # evolution time needs to be set sufficiently large
-    num_time_slices = 100
+    evo_time = 100 # evolution time needs to be set sufficiently large
+    num_time_slices = 300
 
     # expansion order can be toggled in order to speed up calculations
     # Compute the evolution circuit
-    eoh = EOH(qubit_op,initial_state,evo_op, 'paulis', evo_time,num_time_slices,expansion_mode='suzuki',expansion_order=1)
+    eoh = EOH(qubit_op,initial_state,evo_op, 'paulis', evo_time,num_time_slices,expansion_mode='suzuki',expansion_order=2)
+    circ = eoh.construct_circuit()
+    qasm = circ.qasm()
+    #print(circ.draw())
+    file = open("qasm.txt", 'w')
+    for i in range(0,2**n):
+        energy_i = classical[i][i]
+        file.write(str(energy_i)+'\n')
+    file.write(qasm)
+    file.close()
+    """
     backend = LegacySimulators.get_backend('statevector_simulator') # only the statevector_simulator works
-    quantum_instance = QuantumInstance(backend, pass_manager=PassManager())
+    quantum_instance = QuantumInstance(shots=1,backend=backend, pass_manager=PassManager())
     # Execute our particular circuit
     result = eoh.run(quantum_instance) # this is where all the time cost is!
     # result is a tuple of outputs one just the average of the outcome the other the whole output
@@ -106,6 +117,7 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     compare = np.sum(classical_estates, axis=0)
     compare = compare[2:len(compare)]
     """
+    """
     plt.bar(range(2 ** n), compare)
     plt.bar(range(2 ** n), update)
     plt.show()
@@ -113,9 +125,9 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     return update
 
 
-n=2
-M=2
-N=10
+n=7
+M=12
+N=0
 states = []
 marked_states = generate_marked_states(n, M)
 for state in marked_states:
@@ -123,17 +135,23 @@ for state in marked_states:
 print(states)
 update = 0
 start_evol = time.time()
-update = run_evolution(n, M, 0.1, 5, marked_states)
+update = run_evolution(n, M, 0.5, 5, marked_states)
 end_evol = time.time()
-
+#update = [0.00339019,0.000381006,0.0237346,0.0315199,0.0310795,0.018268,0.016974,0.0105108,0.06652,0.0445995,0.00181729,0.0143614,0.0125738,0.00659924,0.0110921,0.0011829,0.00663663,0.0744168,0.0091871,0.00392531,0.00206133,0.0656466,0.00981126,0.00360323,0.00304289,0.00272767,0.0169954,0.00415056,0.00333704,0.0657484,0.00161517,0.000373542,0.00197969,1.78023e-06,0.00245165,0.00279078,0.0434809,0.0347769,0.00259702,0.0183415,0.0124327,0.00379197,0.00490723,0.00117928,0.0144335,0.0337546,0.0404741,0.00111177,0.00265345,0.0629585,0.00132536,0.00366255,0.0399588,0.0223633,0.00055195,0.0183574,0.00460192,0.000730764,0.00686781,0.00184048,0.0145706,0.00521343,0.00871006,0.0192452]
+#plt.bar(range(2 ** n), update)
+#plt.show()
+"""
 for i in range(0, N):
     update += (run_evolution(n, M, 0.1, 2, marked_states))/N
 
 print(" evol time = ",end_evol-start_evol)
-
+compare = np.zeros(2**n)
+for i in states:
+    compare[i]=1
+plt.bar(range(2 ** n), compare)
 plt.bar(range(2 ** n), update)
 plt.show()
-
+"""
 """
 AN ALTERNATIVE WAY TO INITIALISE THE ALGORITHM
 
