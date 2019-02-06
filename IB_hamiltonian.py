@@ -161,7 +161,7 @@ def evolve_state(n, M, dt, num_steps, W, field_strength):
     if norm > 0:
         update = update / norm
     update = np.abs(update)
-    compare = np.sum(classical_estates,axis=0)
+    compare = np.sum(classical_estates, axis=0)
     compare = compare[2:len(compare)]
     update=update**2
     #print(compare)

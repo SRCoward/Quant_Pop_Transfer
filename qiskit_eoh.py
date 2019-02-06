@@ -81,18 +81,20 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     print("initial state of the evolution =", state)
     initial_state = Custom(n,'uniform',state)
     #initial_state = Zero(n)
-    evo_time = 100 # evolution time needs to be set sufficiently large
-    num_time_slices = 300
+    evo_time = 1 # evolution time needs to be set sufficiently large
+    num_time_slices = 1
 
     # expansion order can be toggled in order to speed up calculations
     # Compute the evolution circuit
     eoh = EOH(qubit_op,initial_state,evo_op, 'paulis', evo_time,num_time_slices,expansion_mode='suzuki',expansion_order=2)
     circ = eoh.construct_circuit()
     qasm = circ.qasm()
-    #print(circ.draw())
-    file = open("qasm.txt", 'w')
+    print(circ.draw())
+    energies=[]
+    file = open("qasm_n"+str(n)+"_evol"+str(evo_time)+"_num_slices"+str(num_time_slices)+".txt", 'w')
     for i in range(0,2**n):
         energy_i = classical[i][i]
+        energies.append(energy_i)
         file.write(str(energy_i)+'\n')
     file.write(qasm)
     file.close()
@@ -116,17 +118,17 @@ def run_evolution(n, M, W, driver_strength, marked_states):
     # compare just highlights all the marked states for comparison in a plot later produced
     compare = np.sum(classical_estates, axis=0)
     compare = compare[2:len(compare)]
-    """
-    """
-    plt.bar(range(2 ** n), compare)
-    plt.bar(range(2 ** n), update)
+
+
+    #plt.bar(range(2 ** n), compare)
+    plt.bar(energies, update)
     plt.show()
-    """
+    
     return update
+    """
 
-
-n=7
-M=12
+n=2
+M=2
 N=0
 states = []
 marked_states = generate_marked_states(n, M)
