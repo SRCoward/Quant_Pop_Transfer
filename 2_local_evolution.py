@@ -169,7 +169,7 @@ def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     file.close()
     file = open("exp_driver_evals.txt",'w')
     for i in range(0,2**n):
-        file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag))
+        file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag)+'\n')
     file.close()
     inputs = range(0,2**n)
 
@@ -206,12 +206,15 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
 
 
 
-n = 2
+n = 14 
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
 classical_evals = generate_classical_evals(n,h,J)
-
+file = open("classical_evals.txt",'w')
+for i in range(0,2**n):
+	file.write(str(classical_evals[i])+'\n')
+file.close()
 driver_evals = generate_driver_evals(n,h,J)
 
 minima = generate_local_minima(classical_evals,n)
@@ -223,14 +226,28 @@ statevec[statenum]=1
 for string in minima:
     num = int(string,2)
     print("state =",num," energy =",classical_evals[num])
-print(statenum)
+print("starting state",statenum," with energy ",classical_evals[num])
 
 update_time = time.time()
-for i in range(0,1):
-    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
+#for i in range(0,1):
+#statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
 update_time=time.time()-update_time
 print("update =",update_time,"eval time =",eval_time)
-#print(" update =",statevec)
+dt = 0.08
+gamma = 0.2
+exp_classical_evals = np.exp(-complex(0,1)*dt*classical_evals) #may be +ve
+exp_driver_evals = np.exp(-gamma*complex(0,1)*dt*driver_evals) #may be +ve
+file = open("exp_classical_evals.txt",'w')
+for i in range(0,2**n):
+        file.write(str(exp_classical_evals[i].real)+','+str(exp_classical_evals[i].imag)+'\n')
+file.close()
+file = open("exp_driver_evals.txt",'w')
+for i in range(0,2**n):
+        file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag)+'\n')
+file.close()
+
+"""
+#print(" updated state vector =",statevec)
 statevec = np.abs(statevec)
 statevec = statevec**2  # set update to be a vector of probabilities
 #print("updated state vector = ", statevec)
@@ -239,4 +256,4 @@ plt.bar(classical_evals, statevec)
 plt.bar(classical_evals[statenum],statevec[statenum])
 
 plt.show()
-print(FFT_statevec([0,1,0,0,0,0,0,0]))
+"""

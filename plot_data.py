@@ -8,5 +8,5 @@ for i in range(0,len(data[:,0])):
         sum+=data[i][1]
 data = np.append(data,[[0, sum]],axis=0)
 #print(data[:,0])
-plt.bar(data[:,0],data[:,1],width=0.1)
+plt.bar(data[:,0],data[:,1],width=0.4)
 plt.show()

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+g++ -O3 --std=c++11 2_local_evolution.cpp
+python3 2_local_evolution.py
+time ./a.out
+python3 plot_data.py
