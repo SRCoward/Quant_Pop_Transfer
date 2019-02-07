@@ -2,6 +2,9 @@
 #include<vector>
 #include<complex>
 #include<math.h>
+#include<fstream>
+#include<string>
+#include<iomanip>
 using namespace std;
 //we generate a subset of size roughly n/2 of subsets of bonds
 /*void generate_marked_bonds(int n,std::vector<std::tuple<int,int>> marked_bonds){
@@ -41,10 +44,45 @@ void FFT_statevec(int n, complex<double> statevec[]){
 //	double divisor = sqrt(1/pow(2,power));
 //	complex& operator*=(statevec,1);
 }
+void read_in_evals(complex<double>exp_classical_evals[],complex<double>exp_driver_evals[]){
+	ifstream inFile("exp_classical_evals.txt");
+	string line;
+	int i = 0;
+	while (!inFile.eof()){
+		getline(inFile,line);
+		size_t comma = line.find(',');
+		double a =  std::stod(line.substr(0,comma-1));
+		double b = std::stod(line.substr(comma+1)); 
+	//	double b;
+		exp_classical_evals[i] = (a,b);
+		 		
+		i+=1;
+		cout<<exp_classical_evals[i]<<endl;
+	}
+	inFile.close();
+	ifstream inFile2("exp_driver_evals.txt");
+	i=0;
+	while(!inFile2.eof()){
+		getline(inFile2,line);
+		size_t comma = line.find(',');
+		double a = std::stod(line.substr(0,comma-1));
+		double b = std::stod(line.substr(comma+1)); 
+		exp_driver_evals[i] = (a,b);
+		//real(exp_driver_evals[i]) = stod(line.substr(0,comma-1)); 
+		//imag(exp_driver_evals[i]) = stod(line.substr(comma+1,line.end()));
+		i+=1;
+		cout<<exp_driver_evals[i]<<endl;
+	}
+	inFile2.close();
+}
+
 
 void evolve_step(int n,complex<double>statevec[],double dt[],double classical_evals[],double driver_evals[], double gamma){
-statevec = FFT_statevec(n,statevec);
-//classical evals should be exponentiated
+	FFT_statevec(n,statevec);
+	int vec_length = pow(2,n);
+	complex<double> classical_evec[vec_length] = 0;
+}
+
 
 int main(void){
 //do something useful here
