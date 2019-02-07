@@ -161,14 +161,25 @@ def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     #time_i_loop = 0
     exp_classical_evals = np.exp(-complex(0,1)*dt*classical_evals) #may be +ve
     exp_driver_evals = np.exp(-gamma*complex(0,1)*dt*driver_evals) #may be +ve
+    file = open("exp_classical_evals.txt",'w')
+    for i in range(0,2**n):
+        data = exp_driver_evals[i]
+        data = data.real
+        file.write(str(exp_classical_evals[i].real)+','+str(exp_classical_evals[i].imag)+'\n')
+    file.close()
+    file = open("exp_driver_evals.txt",'w')
+    for i in range(0,2**n):
+        file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag))
+    file.close()
     inputs = range(0,2**n)
+
     num_cores = multiprocessing.cpu_count()
     update = Parallel(n_jobs=num_cores)(delayed(process_input)(i,statevec,exp_driver_evals,exp_classical_evals) for i in inputs)
     """
     for i in range(0,2**n):
         gap = time.time()
         classical_evec = np.zeros(2**n)
-        classical_evec[i]=1
+        classical_evec[i] = 1
         classical_evec = FFT_statevec(classical_evec)
 
         for k in range(0,2**n):
@@ -183,7 +194,7 @@ def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     return update
 
 
-def process_input(i,statevec,exp_driver_evals,exp_classical_evals):
+def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
     update=0
     classical_evec = np.zeros(2 ** n)
     classical_evec[i] = 1
@@ -195,7 +206,7 @@ def process_input(i,statevec,exp_driver_evals,exp_classical_evals):
 
 
 
-n=8
+n = 2
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
@@ -207,7 +218,7 @@ minima = generate_local_minima(classical_evals,n)
 
 eval_time=time.time()-eval_time
 statevec = np.zeros((2**n))
-statenum = int(minima[0],2)
+statenum = int(minima[randint(0,len(minima)-1)],2)
 statevec[statenum]=1
 for string in minima:
     num = int(string,2)
@@ -215,17 +226,17 @@ for string in minima:
 print(statenum)
 
 update_time = time.time()
-for i in range(0,300):
-    statevec = evolve_step(n,statevec,0.2,classical_evals,driver_evals,0.2)
+for i in range(0,1):
+    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
 update_time=time.time()-update_time
 print("update =",update_time,"eval time =",eval_time)
 #print(" update =",statevec)
 statevec = np.abs(statevec)
 statevec = statevec**2  # set update to be a vector of probabilities
-print("updated state vector = ", statevec)
-
+#print("updated state vector = ", statevec)
+print(max(statevec))
 plt.bar(classical_evals, statevec)
+plt.bar(classical_evals[statenum],statevec[statenum])
 
 plt.show()
-
-
+print(FFT_statevec([0,1,0,0,0,0,0,0]))
