@@ -30,6 +30,7 @@ using namespace std;
 //Lets just read in the useful stuff that we actually need as have already generated all the data in python
 void FFT_statevec(int n, vector<complex<double>> &statevec){
 	int layer = 1;
+	double normalise = sqrt(pow(2,-n));
 	while (layer<pow(2,n)){
 		for (int i=0;i<pow(2,n);i+=layer*2){
 			for (int j=i;j<i+layer;j++){
@@ -37,6 +38,10 @@ void FFT_statevec(int n, vector<complex<double>> &statevec){
 				complex<double> y = statevec[j + layer];
 				statevec[j] = x + y;
 				statevec[j+layer] = x - y;
+				if (layer >= pow(2,n-1)-0.01){
+					statevec[j]*=normalise;
+					statevec[j+layer]*=normalise;
+				}
 			}
 		}
 		layer*=2;
@@ -88,14 +93,14 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 	vector<complex<double>> update(vec_length,complex<double>(0,0));
 	double normalise = pow(2,-n);
 	int i,k;
-	#pragma omp parallel for private(i,k)
+	#pragma omp parallel for private(i)
 	double sum = 0;
 	for (i=0; i<vec_length; i++){
 		vector<complex<double>> classical_evec(vec_length,complex<double> (0,0));
 		classical_evec[i] = 1;
 		FFT_statevec(n,classical_evec);
 		for (k=0;k<vec_length;k++){
-			update[i]+=normalise*statevec[k]*exp_driver_evals[k]*classical_evec[k];
+			update[i]+=statevec[k]*exp_driver_evals[k]*classical_evec[k];
 		}
 		update[i]*= exp_classical_evals[i];
 		if (real(update[i])>pow(10,11)){
@@ -106,8 +111,11 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 	sum+=pow(real(update[i]),2)+pow(imag(update[i]),2);
 	}
 	cout<<"sum is ="<<sum<<endl;
+	sum = sqrt(sum);
+	cout<<"sqrt sum="<<sum<<endl;
 	for (int i=0; i<vec_length; i++){
 		statevec[i] = update[i]*pow(sum,-1);
+		//sum+=pow(real(update[i]),2)+pow(imag(update[i]),2);
 	}
 }
 
@@ -115,7 +123,7 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 int main(void){
 int n,start_state_num;
 cout<<"input integer n:"<<endl;
-n=12;
+n=14;
 int vec_length = pow(2,n);
 ifstream inFile("classical_evals.txt");
 vector<string> energies(vec_length);
@@ -126,11 +134,9 @@ inFile.close();
 cout<<"input start state num:"<<endl;
 cin>>start_state_num;
 
-//do something useful here
-//generate_marked_bonds(2,marked_bonds);
 vector<complex<double>> statevec(vec_length,0);
 statevec.at(start_state_num)=1;
-cout<<"here";
+
 vector<complex<double>>exp_classical_evals;
 vector<complex<double>>exp_driver_evals;
 //exp_driver_evals[0]=complex<double>(1,0);
@@ -139,8 +145,8 @@ read_in_evals(n,exp_classical_evals,exp_driver_evals);
 //TO DO:  FOR the statevector it is not normalised so be careful will need to include this factor back in at some stage
 //exp_classical_evals[0]=complex<double>(1,0);
 for (int i=0;i<50;i++){
-	evolve_step(n,statevec,exp_classical_evals,exp_driver_evals);
 	cout<<i<<endl;
+	evolve_step(n,statevec,exp_classical_evals,exp_driver_evals);
 };
 
 ofstream outFile("results.csv");
@@ -153,7 +159,4 @@ for (size_t i=0 ; i<vec_length ; i++){
 
 }
 outFile.close();
-for (int i=0;i<24;i++){
-	cout<<"i = "<<i<<"  "<<pow(2,-i)<<endl;
-}
 }
