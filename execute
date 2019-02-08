@@ -1,11 +1,12 @@
 #!/bin/bash
 
+export OMP_NUM_THREADS=1
 echo "Input integer number of qubits n"
 read num
 echo "recieved input ${num}"
 sed -i "s/n=[0-9]*/n=${num}/g" 2_local_evolution.py
-sed -i "s/n=[0-9]*/n=${num}/g" 2_local_evolution.cpp
-g++ -O3 --std=c++11 2_local_evolution.cpp
+sed -i "s/n=[0-9]*/n=${num}/g" long_2_local_evolution.cpp
+g++ -O3 --std=c++11 -fopenmp long_2_local_evolution.cpp
 python3 2_local_evolution.py
 time ./a.out
 python3 plot_data.py
