@@ -87,24 +87,35 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 	int vec_length = pow(2,n);
 	vector<complex<double>> update(vec_length,complex<double>(0,0));
 	double normalise = pow(2,-n);
-	#pragma omp parallel for default(none), shared(classical_evec,update,statevec,exp_driver_evals,classical_evec), private(i,k)
-	for (int i=0; i<vec_length; i++){
+	int i,k;
+	#pragma omp parallel for private(i,k)
+	double sum = 0;
+	for (i=0; i<vec_length; i++){
 		vector<complex<double>> classical_evec(vec_length,complex<double> (0,0));
 		classical_evec[i] = 1;
 		FFT_statevec(n,classical_evec);
-		for (int k=0;k<vec_length;k++){
-			update[i]+=statevec[k]*exp_driver_evals[k]*classical_evec[k];
+		for (k=0;k<vec_length;k++){
+			update[i]+=normalise*statevec[k]*exp_driver_evals[k]*classical_evec[k];
 		}
-		update[i]*= exp_classical_evals[i]*normalise;
+		update[i]*= exp_classical_evals[i];
+		if (real(update[i])>pow(10,11)){
+				cout<<"update value "<<i<<" "<<update[i]<<endl;
+				cout<<"classical_evec "<<classical_evec[i]<<endl;
+				cout<<"driver_evals "<<exp_driver_evals[i]<<endl;
+		}	
+	sum+=pow(real(update[i]),2)+pow(imag(update[i]),2);
 	}
-	statevec = update;
+	cout<<"sum is ="<<sum<<endl;
+	for (int i=0; i<vec_length; i++){
+		statevec[i] = update[i]*pow(sum,-1);
+	}
 }
 
 
 int main(void){
 int n,start_state_num;
 cout<<"input integer n:"<<endl;
-n=14;
+n=12;
 int vec_length = pow(2,n);
 ifstream inFile("classical_evals.txt");
 vector<string> energies(vec_length);
@@ -127,9 +138,11 @@ vector<complex<double>>exp_driver_evals;
 read_in_evals(n,exp_classical_evals,exp_driver_evals);
 //TO DO:  FOR the statevector it is not normalised so be careful will need to include this factor back in at some stage
 //exp_classical_evals[0]=complex<double>(1,0);
-for (int i=0;i<100;i++){
+for (int i=0;i<50;i++){
 	evolve_step(n,statevec,exp_classical_evals,exp_driver_evals);
+	cout<<i<<endl;
 };
+
 ofstream outFile("results.csv");
 for (size_t i=0 ; i<vec_length ; i++){
 	string round_energy = energies.at(i);
@@ -140,4 +153,7 @@ for (size_t i=0 ; i<vec_length ; i++){
 
 }
 outFile.close();
+for (int i=0;i<24;i++){
+	cout<<"i = "<<i<<"  "<<pow(2,-i)<<endl;
+}
 }

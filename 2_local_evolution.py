@@ -206,7 +206,7 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
 
 
 
-n = 14 
+n =9
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
@@ -225,12 +225,17 @@ statenum = int(minima[randint(0,len(minima)-1)],2)
 statevec[statenum]=1
 for string in minima:
     num = int(string,2)
-    print("state =",num," energy =",classical_evals[num])
-print("starting state",statenum," with energy ",classical_evals[num])
-
+    #print("state =",num," energy =",classical_evals[num])
+print("starting state",statenum," with energy ",classical_evals[statenum])
+print("core count =",multiprocessing.cpu_count())
 update_time = time.time()
-#for i in range(0,1):
-#statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
+N=1
+
+statevec = np.zeros((2 ** n))
+statevec[statenum] = 1
+for i in range(0,100):
+    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
+
 update_time=time.time()-update_time
 print("update =",update_time,"eval time =",eval_time)
 dt = 0.08
@@ -245,15 +250,18 @@ file = open("exp_driver_evals.txt",'w')
 for i in range(0,2**n):
         file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag)+'\n')
 file.close()
+"""
+plt.plot(range(0,2**n),classical_evals)
 
+plt.show()
 """
 #print(" updated state vector =",statevec)
+
 statevec = np.abs(statevec)
-statevec = statevec**2  # set update to be a vector of probabilities
-#print("updated state vector = ", statevec)
-print(max(statevec))
+statevec = statevec**2
+
 plt.bar(classical_evals, statevec)
 plt.bar(classical_evals[statenum],statevec[statenum])
 
 plt.show()
-"""
+
