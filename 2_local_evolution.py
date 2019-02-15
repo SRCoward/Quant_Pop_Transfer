@@ -206,7 +206,7 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
 
 
 
-n =9
+n=14
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
@@ -233,8 +233,8 @@ N=1
 
 statevec = np.zeros((2 ** n))
 statevec[statenum] = 1
-for i in range(0,100):
-    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
+#for i in range(0,100):
+#    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
 
 update_time=time.time()-update_time
 print("update =",update_time,"eval time =",eval_time)
@@ -260,8 +260,8 @@ plt.show()
 statevec = np.abs(statevec)
 statevec = statevec**2
 
-plt.bar(classical_evals, statevec)
-plt.bar(classical_evals[statenum],statevec[statenum])
+#plt.bar(classical_evals, statevec)
+#plt.bar(classical_evals[statenum],statevec[statenum])
 
-plt.show()
+#plt.show()
 
