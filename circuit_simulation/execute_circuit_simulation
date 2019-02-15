@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "input integer number of qubits"
+read num
+sed -i "s/num_qubits=[0-9]*/num_qubits=${num}/g" 2_local_hamiltonian.py
+python3 2_local_hamiltonian.py
+./myExecutable
+echo -e "\nInput integer start state"
+read state
+echo "received input ${state}"
+sed -i "s/start_state=[0-9]*/start_state=${state}/g" hamming_plot.py
+sed -i "s/num_qubits=[0-9]*/num_qubits=${num}/g" hamming_plot.py
+python3 plot_data.py
+python3 hamming_plot.py
