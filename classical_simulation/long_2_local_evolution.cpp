@@ -6,6 +6,8 @@
 #include<string>
 #include<iomanip>
 #include<omp.h>
+#include<time.h>
+
 using namespace std;
 //we generate a subset of size roughly n/2 of subsets of bonds
 /*void generate_marked_bonds(int n,std::vector<std::tuple<int,int>> marked_bonds){
@@ -137,7 +139,7 @@ void evolve_step(int n,vector<complex<long double>> &statevec,vector<complex<lon
 int main(void){
 int n,start_state_num;
 cout<<"input integer n:"<<endl;
-n=13;
+n=16;
 int vec_length = pow(2,n);
 ifstream inFile("classical_evals.txt");
 vector<string> energies(vec_length);
@@ -158,11 +160,12 @@ vector<complex<long double>>exp_driver_evals;
 read_in_evals(n,exp_classical_evals,exp_driver_evals);
 //TO DO:  FOR the statevector it is not normalised so be careful will need to include this factor back in at some stage
 //exp_classical_evals[0]=complex<double>(1,0);
+clock_t total_time = clock();
 for (int i=0;i<50;i++){
 	cout<<i<<endl;
 	evolve_step(n,statevec,exp_classical_evals,exp_driver_evals);
 };
-
+total_time = clock() - total_time;
 ofstream outFile("results.csv");
 string round_energy = energies.at(start_state_num);
 round_energy = round_energy.substr(0,7);
@@ -178,4 +181,8 @@ for (size_t i=0 ; i<vec_length ; i++){
 }
 
 outFile.close();
+
+ofstream timeFile("timings.csv",ofstream::app);
+timeFile<<"("<<n<<","<<((float)total_time)/CLOCKS_PER_SEC<<")"<<endl;
+timeFile.close();
 }
