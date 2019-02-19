@@ -270,5 +270,11 @@ def evolve(n,evo_time,num_time_slices,expansion_order):
 
     plt.show()
     """
-num_qubits=6
-evolve(num_qubits,8,100,1)
+num_qubits=10
+timings = open("timing.csv","a")
+start_time = time.time()
+evolve(num_qubits,4,50,1)
+end_time = time.time()
+timings.write('('+str(num_qubits)+','+str(end_time-start_time)+')'+'\n')
+timings.close()
+

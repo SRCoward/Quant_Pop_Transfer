@@ -1,0 +1,7 @@
+#!/bin/bash
+for num in {2..10}
+do 
+	sed -i "s/num_qubits=[0-9]*/num_qubits=${num}/g" 2_local_hamiltonian.py
+	python3 2_local_hamiltonian.py
+	./myExecutable
+done

@@ -30,8 +30,8 @@ def hamming_distance(a,b):
     return count
 
 # these two lines get altered by a sed command
-num_qubits=6
-start_state=63
+num_qubits=
+start_state=
 len_data = data.shape
 len_data = len_data[0]
 hamming_distances_frequencies = np.zeros(num_qubits+1)
