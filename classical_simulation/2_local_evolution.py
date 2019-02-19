@@ -159,13 +159,8 @@ def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     statevec = FFT_statevec(statevec)
     #update = np.zeros(2**n,dtype=complex)
     #time_i_loop = 0
-<<<<<<< HEAD
     exp_classical_evals = np.exp(-complex(0,1)*dt*classical_evals,dtype=complex128) #may be +ve
     exp_driver_evals = np.exp(-gamma*complex(0,1)*dt*driver_evals,dtype=complex128) #may be +ve
-=======
-    exp_classical_evals = np.exp(-complex(0,1)*dt*classical_evals) #may be +ve
-    exp_driver_evals = np.exp(-gamma*complex(0,1)*dt*driver_evals) #may be +ve
->>>>>>> 37764e81f59ac922b5f33f99563b9096b3fcc5cf
     file = open("exp_classical_evals.txt",'w')
     for i in range(0,2**n):
         data = exp_driver_evals[i]
@@ -211,11 +206,7 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
 
 
 
-<<<<<<< HEAD
-n=13
-=======
-n =9
->>>>>>> 37764e81f59ac922b5f33f99563b9096b3fcc5cf
+n=16
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
@@ -242,13 +233,8 @@ N=1
 
 statevec = np.zeros((2 ** n))
 statevec[statenum] = 1
-<<<<<<< HEAD
 #for i in range(0,100):
 #    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
-=======
-for i in range(0,100):
-    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
->>>>>>> 37764e81f59ac922b5f33f99563b9096b3fcc5cf
 
 update_time=time.time()-update_time
 print("update =",update_time,"eval time =",eval_time)
@@ -273,16 +259,4 @@ plt.show()
 
 statevec = np.abs(statevec)
 statevec = statevec**2
-
-<<<<<<< HEAD
-#plt.bar(classical_evals, statevec)
-#plt.bar(classical_evals[statenum],statevec[statenum])
-
-#plt.show()
-=======
-plt.bar(classical_evals, statevec)
-plt.bar(classical_evals[statenum],statevec[statenum])
-
-plt.show()
->>>>>>> 37764e81f59ac922b5f33f99563b9096b3fcc5cf
 

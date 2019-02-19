@@ -1,15 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+# Load the data in format (energy,frequency)
 data = np.loadtxt('results.csv',delimiter=',')
-sum = 0
-"""
-for i in range(0,len(data[:,0])):
-    if data[i][0]==0:
-        sum+=data[i][1]
-
-data = np.append(data,[[0, sum]],axis=0)
-#print(data[:,0])
-"""
-plt.bar(data[:,0],data[:,1],width=0.4)
-plt.bar(data[0,0],data[0,1],width=0.4)
+# plot bar graph of data
+plt.bar(data[:,0],data[:,1],width=0.8)
+plt.bar(data[0,0],data[0,1],width=0.8) # mark the initial state with a coloured bar.
+plt.xlabel("Energy")
+plt.ylabel("Frequency")
 plt.show()
+
+
+
