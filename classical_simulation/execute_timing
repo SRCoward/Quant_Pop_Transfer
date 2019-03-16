@@ -1,12 +1,12 @@
 #!/bin/bash
 
 export OMP_NUM_THREADS=2
-for num in {11..14}
+for num in {2..14}
 do 
 	echo "${num}"
 	sed -i "s/n=[0-9]*/n=${num}/g" 2_local_evolution.py
 	sed -i "s/n=[0-9]*/n=${num}/g" long_2_local_evolution.cpp
-	g++ -O3 --std=c++11 long_2_local_evolution.cpp
+	g++ -O3 --std=c++11 -o myExecutable long_2_local_evolution.cpp
 	python3 2_local_evolution.py
-	time ./a.out
+	time ./myExecutable
 done
