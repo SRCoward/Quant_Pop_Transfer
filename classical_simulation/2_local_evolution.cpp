@@ -7,27 +7,14 @@
 #include<iomanip>
 #include<omp.h>
 using namespace std;
-//we generate a subset of size roughly n/2 of subsets of bonds
-/*void generate_marked_bonds(int n,std::vector<std::tuple<int,int>> marked_bonds){
-	int max_bonds = 0.5*n*(n-1);
-	std::vector<std::tuple<int,int> > all_bonds;
-	int num_marked_bonds = n/2
-	for (int i = 0; i<n ; i++){
-		for (int j = i ; j<n ; j++){
-			all_bonds.push_back(std::make_tuple(i,j));
-			
-		}
-	}
-	std::cout<<all_bonds<<std::endl;
-	for (int i=0; i<num_marked_bonds; i++){
-	
-	}
-		
-	
-		
-}
+
+/*
+The program computes the evolution of our initial state under action of the 2_local Hamiltonian
+This is aims to mimic the circuit simulation by maintaining exponential state vectors.
 */
-//Lets just read in the useful stuff that we actually need as have already generated all the data in python
+
+//FWHT_statevec computes the Fast Walsh-Hadamard transform of the input statevec, which is of length 2^n
+// Code based off the example given at: https://en.wikipedia.org/wiki/Fast_Walsh%E2%80%93Hadamard_transform
 void FFT_statevec(int n, vector<complex<double>> &statevec){
 	int layer = 1;
 	double normalise = sqrt(pow(2,-n));
@@ -46,10 +33,9 @@ void FFT_statevec(int n, vector<complex<double>> &statevec){
 		}
 		layer*=2;
 	}
-//	int power = n;	
-//	double divisor = sqrt(1/pow(2,power));
-//	complex& operator*=(statevec,1);
 }
+
+//We read in the exponentiated eigenvalues of the classical and driver components of our 2_local Hamiltonian, as described in the report
 void read_in_evals(int n,vector<complex<double>> &exp_classical_evals,vector<complex<double>> &exp_driver_evals){
 	ifstream inFile("exp_classical_evals.txt");
 	string line;
@@ -57,7 +43,6 @@ void read_in_evals(int n,vector<complex<double>> &exp_classical_evals,vector<com
 	while (i<pow(2,n)){
 		getline(inFile,line);
 		size_t comma = line.find(',');
-//		cout<<line.substr(0,comma-1)<<line.substr(comma+1)<<endl;	
 		double a = std::stod(line.substr(0,comma-1));
 		double b = std::stod(line.substr(comma+1)); 
 		complex<double> ab = {a,b};	
@@ -72,21 +57,19 @@ void read_in_evals(int n,vector<complex<double>> &exp_classical_evals,vector<com
 	while(i<pow(2,n)){
 		getline(inFile2,line);
 		size_t comma = line.find(',');
-//		cout<<line.substr(0,comma-1)<<line.substr(comma+1)<<endl;	
 		double a = std::stod(line.substr(0,comma-1));
 		double b = std::stod(line.substr(comma+1)); 
 		
 		exp_driver_evals.push_back(complex<double>(a,b));
-		//real(exp_driver_evals[i]) = stod(line.substr(0,comma-1)); 
-		//imag(exp_driver_evals[i]) = stod(line.substr(comma+1,line.end()));
 		i+=1;
-//		cout<<exp_driver_evals[i-1]<<endl;
-//		cout<<"a="<<complex<double>(a,b)<<endl;
 	}
 	inFile2.close();
 }
 
-
+/*
+evolve_step - implements one Trotter step of the evolution operator for the 2_local Hamiltonian.
+The program takes an input state vector of length 2^n, and the vectors of exponentiated eigenvalues for the driver and classical Hamiltonians
+*/
 void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>> &exp_classical_evals,vector<complex<double>> &exp_driver_evals){
 	FFT_statevec(n,statevec);
 	int vec_length = pow(2,n);
@@ -110,16 +93,12 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 				cout<<"classical_evec "<<classical_evec[i]<<endl;
 				cout<<"driver_evals "<<exp_driver_evals[i]<<endl;
 		}
+	// enable multithreading
 	//thread_num = omp_get_thread_num();
 	//sum_threads[thread_num]+=pow(real(update[i]),2)+pow(imag(update[i]),2);
 	}
 	double sum=0;
-	/*
-	for (int j=0;j<num_threads;j++){
-		sum+=sum_threads[j];
-	}
-	cout<<"sum is ="<<sum<<endl;
-	*/
+    // We added some checking code to ensure that our operator acts as a norm preserving operation, we can exclude this to improve runtimes
 	sum=0;
 	for (int i=0; i<vec_length;i++){
 		sum+=pow(real(update[i]),2)+pow(imag(update[i]),2);
@@ -128,16 +107,18 @@ void evolve_step(int n,vector<complex<double>> &statevec,vector<complex<double>>
 	cout<<"sqrt sum="<<sum<<endl;
 	for (int i=0; i<vec_length; i++){
 		statevec[i] = update[i]*pow(sum,-1);
-		//sum+=pow(real(update[i]),2)+pow(imag(update[i]),2);
 	}
 }
 
 
 int main(void){
 int n,start_state_num;
+// n controls the number of qubits in our system
+// start_state_num - corresponds to the number of the starting state which gets represented in binary
 cout<<"input integer n:"<<endl;
 n=13;
 int vec_length = pow(2,n);
+// we read in the classical energies
 ifstream inFile("classical_evals.txt");
 vector<string> energies(vec_length);
 for (size_t j=0; j<vec_length; j++){
@@ -152,16 +133,14 @@ statevec.at(start_state_num)=1;
 
 vector<complex<double>>exp_classical_evals;
 vector<complex<double>>exp_driver_evals;
-//exp_driver_evals[0]=complex<double>(1,0);
-//cout<<exp_classical_evals[0]<<"hello!"<<endl;
 read_in_evals(n,exp_classical_evals,exp_driver_evals);
-//TO DO:  FOR the statevector it is not normalised so be careful will need to include this factor back in at some stage
-//exp_classical_evals[0]=complex<double>(1,0);
+
+// This is the main evolution loop. We compute 50 Trotter steps, recursively.
 for (int i=0;i<50;i++){
 	cout<<i<<endl;
 	evolve_step(n,statevec,exp_classical_evals,exp_driver_evals);
 };
-
+// Write our results to results.csv which get used to plot the date
 ofstream outFile("results.csv");
 for (size_t i=0 ; i<vec_length ; i++){
 	string round_energy = energies.at(i);

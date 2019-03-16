@@ -1,7 +1,5 @@
 from random import randint, uniform
-
 import numpy as np
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit import execute
 # Import Aer
@@ -10,7 +8,8 @@ import matplotlib.pyplot as plt
 
 
 """
-Hamiltonian computes the hamiltionian with which we will evolve the system
+Hamiltonian computes the impurity band (IB) Hamiltonian as described in the accompanying report.
+The program contains an implementation of the Trotter evolution scheme for the IB Hamiltonian 
 """
 
 
@@ -108,7 +107,7 @@ def generate_driver_eigenstates(n, bit_strings):
     return outputstate
 
 
-# trotter_time_step computes one time step using the trotter suzuki decomposition to evolve the state
+# trotter_time_step computes one time step using the Trotter decomposition to evolve the state
 # \param n is number of bits
 # \param M is number of marked states
 # \param driver_eigenstates a 2^n x 2^n + 1 matrix of all eigenvectors with corresponding eigenvalue in first column
@@ -123,16 +122,16 @@ def trotter_time_step(n, M, dt, classical_eigenstates, driver_eigenstates,initia
     for i in range(0, 2**n):
         for k in range(0, 2**n):
             lambda_k_D = driver_eigenstates[k][0] # eval of kth estate of Driver
-
             vec_k_D = driver_eigenstates[k][1:2**n+1]
-            # print("driver estate number k=",k, "state =", vec_k_D, "eval =", lambda_k_D)
             dot_product = np.dot(vec_k_D, initial_state)
+            # Follow the update formula described in the report
             update[i] += np.exp(dt*complex(0, 1)*lambda_k_D*field_strength)*vec_k_D[i]*dot_product
-        for k in range(0, len(state_nums)):
 
+        for k in range(0, len(state_nums)):
             if state_nums[k] == i:
                 # print("classical eval", k, " value is", classical_eigenstates[k][1])
                 update[i]*=np.exp(-dt*classical_eigenstates[k][1]*complex(0,1))
+
     return update
 
 
@@ -148,26 +147,27 @@ def evolve_state(n, M, dt, num_steps, W, field_strength):
     epsilon = generate_epsilon(M, W)
     classical_estates = generate_classical_eigen(n, M, marked_states, epsilon)
     bit_strings = generate_bit_strings(n)
-
     driver_estates = generate_driver_eigenstates(n, bit_strings)
     initial_state = classical_estates[0]
+
     print("start state=", initial_state[0])
     initial_state = initial_state[2:len(initial_state)]
     print("marked states=", classical_estates[0:M,0])
     update = []
+    # iterate through num_steps applications of the Trotter operator
     for i in range(0, num_steps):
         update = trotter_time_step(n, M, dt, classical_estates, driver_estates, initial_state, field_strength)
     norm = np.linalg.norm(update)
     if norm > 0:
-        update = update / norm
+        update = update / norm # normalise the output state
     update = np.abs(update)
     compare = np.sum(classical_estates, axis=0)
     compare = compare[2:len(compare)]
     update=update**2
-    #print(compare)
+
+    # produce bar chart of frequencies against state number, highlighting the marked states
     plt.bar(range(2**n),compare)
     plt.bar(range(2 ** n), update)
-
     plt.show()
 
     return update

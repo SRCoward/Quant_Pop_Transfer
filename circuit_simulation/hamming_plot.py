@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 # Load the data in format (energy,frequency)
 data = np.loadtxt('results.csv',delimiter=',')
 
+"""
+We produce a plot of the hamming distance from our initial state against the frequency with which we measure these states
+This is to demonstrate that we can measure states separated by large hamming distances from the initial state
+"""
+
 # computes the hamming distance between integers a and b
 def hamming_distance(a,b):
     if a==b:
@@ -30,8 +35,8 @@ def hamming_distance(a,b):
     return count
 
 # these two lines get altered by a sed command
-num_qubits=
-start_state=
+num_qubits=4
+start_state=0
 len_data = data.shape
 len_data = len_data[0]
 hamming_distances_frequencies = np.zeros(num_qubits+1)

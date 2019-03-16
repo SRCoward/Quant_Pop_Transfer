@@ -3,6 +3,13 @@ import numpy as np
 # Get generator functions from other IB_hamiltonian.py file
 from IB_hamiltonian import generate_marked_states, generate_epsilon, generate_classical_eigen
 
+"""
+This program generates the example landscape plot given in the report.
+It uses the impurity band hamiltonian generated in IB_hamiltonian as our example.
+The landscape produced takes 6 qubits and 8 marked states.
+We generate a plot of the landscape, corresponding to state number against energy.
+"""
+
 n = 6
 M = 2**3
 eigenvalues = np.zeros(2**n)

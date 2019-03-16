@@ -19,7 +19,6 @@ def generate_marked_bonds(n):
     subsets = list(combinations(range(n), 2))
     upper = len(subsets)
 
-
     while len(marked_bonds)< (n/2):
         index = randint(0,upper-1)
         if subsets[index] not in marked_bonds:
@@ -49,6 +48,12 @@ def generate_h_J(n,marked_bonds):
     return h, J
 
 
+"""
+We compute the classical eigenvalues of our 2_local Hamiltonian, described in the report
+\param n is the number of qubits
+\param h is a vector of random numbers
+\param J is a matrix of random entries
+"""
 def generate_classical_evals(n,h,J):
     classical_evals = np.zeros(2**n)
     for i in range(0,2**n):
@@ -65,6 +70,12 @@ def generate_classical_evals(n,h,J):
     return classical_evals
 
 
+"""
+We compute the driver eigenvalues of our 2_local Hamiltonian, described in the report
+\param n is the number of qubits
+\param h is a vector of random numbers
+\param J is a matrix of random entries
+"""
 def generate_driver_evals(n,h,J):
     driver_evals = np.zeros(2**n)
     for i in range(0,2**n):
@@ -80,6 +91,13 @@ def generate_driver_evals(n,h,J):
                 driver_evals[i] += (1 + abs(J[j][k]))*(-1)**(bit_j+bit_k)
     return driver_evals
 
+
+"""
+single_BF_steepest_descent - computes a steepest descent optimisation initialised from start_state
+This locates the local minima which the starting state will lead to following single bit flips
+\param classical_evals - vector of classical evals
+\param start_state - state number of the initial state
+"""
 def single_BF_steepest_descent(classical_evals, start_state):
     # We compute the local minima of the hamiltonian using steepest descent starting from this initial state
     start_statenum = int(start_state,2)
@@ -116,6 +134,11 @@ def single_BF_steepest_descent(classical_evals, start_state):
     return final_state
 
 
+"""
+generate_local_minia computes all local minima which correspond to an exact state number.
+\param classical_evals - vector of eigenvalues of our classical Hamiltonian
+\param n - number of qubits in the system
+"""
 def generate_local_minima(classical_evals,n):
     minima = []
     for i in range(0,2**n):
@@ -131,7 +154,8 @@ def generate_local_minima(classical_evals,n):
 """
 Returns a version of the fast fourier transformed state vector but with plus and minus one instead of phases
 statevec is the input state vector, of dim 2**n
-ref: https://en.wikipedia.org/wiki/Fast_Walsh%E2%80%93Hadamard_transform
+code based on ref: https://en.wikipedia.org/wiki/Fast_Walsh%E2%80%93Hadamard_transform
+\param statevec is the intial state vector which we update
 """
 def FFT_statevec(statevec):
     layer = 1
@@ -146,15 +170,16 @@ def FFT_statevec(statevec):
     statevec = statevec/(np.sqrt(len(statevec)))
     return statevec
 
-"""
-Makes one trotter_suzuki style time step
-n is number of qubits
-statevec is the input vector
-dt is the desired time step
-evals are vectors of the corresponding hamiltonians
-gamma is the factor which multiplies our driver hamiltonian
-"""
 
+"""
+Makes one trotter_suzuki style time step, we do not actually call this but it yields an python state vector simulation
+So we can do the same computations as in our C++ program but the python code is slower
+\param n is number of qubits
+\param statevec is the input vector
+\param dt is the desired time step
+\param evals are vectors of the corresponding hamiltonians
+\param gamma is the factor which multiplies our driver hamiltonian
+"""
 def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     statevec = FFT_statevec(statevec)
     #update = np.zeros(2**n,dtype=complex)
@@ -174,26 +199,16 @@ def evolve_step(n,statevec,dt, classical_evals,driver_evals, gamma):
     inputs = range(0,2**n)
 
     num_cores = multiprocessing.cpu_count()
+    # For doing parallel computations of the vector update, use the python parallel package
     update = Parallel(n_jobs=num_cores)(delayed(process_input)(i,statevec,exp_driver_evals,exp_classical_evals) for i in inputs)
-    """
-    for i in range(0,2**n):
-        gap = time.time()
-        classical_evec = np.zeros(2**n)
-        classical_evec[i] = 1
-        classical_evec = FFT_statevec(classical_evec)
-
-        for k in range(0,2**n):
-            update[i] += statevec[k]*exp_driver_evals[k]*classical_evec[k]
-        update[i] *= exp_classical_evals[i]
-
-        gap = time.time() - gap
-        time_i_loop += gap
-    print("time for i loop = ",time_i_loop)
-    print("parallel results=",results-update)
-    """
     return update
 
-
+"""
+process_input is the computation we farm out across multiple cores. It computes an update for each vector element
+\param i - index to update
+\param exp_driver_evals - vector of exponentiated eigen values
+\param exp_classical_evals - vector of exponentiated classical evals
+"""
 def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
     update=0
     classical_evec = np.zeros(2 ** n)
@@ -205,8 +220,8 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
     return update
 
 
-
-n=16
+# Problem setup
+n=3
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
@@ -216,28 +231,15 @@ for i in range(0,2**n):
 	file.write(str(classical_evals[i])+'\n')
 file.close()
 driver_evals = generate_driver_evals(n,h,J)
-
 minima = generate_local_minima(classical_evals,n)
-
 eval_time=time.time()-eval_time
-statevec = np.zeros((2**n))
 statenum = int(minima[randint(0,len(minima)-1)],2)
-statevec[statenum]=1
-for string in minima:
-    num = int(string,2)
-    #print("state =",num," energy =",classical_evals[num])
+
+
 print("starting state",statenum," with energy ",classical_evals[statenum])
-print("core count =",multiprocessing.cpu_count())
-update_time = time.time()
-N=1
 
-statevec = np.zeros((2 ** n))
-statevec[statenum] = 1
-#for i in range(0,100):
-#    statevec = evolve_step(n,statevec,0.08,classical_evals,driver_evals,0.2)
 
-update_time=time.time()-update_time
-print("update =",update_time,"eval time =",eval_time)
+# Here we compute our exponentiated eigenvalues and write them to file
 dt = 0.08
 gamma = 0.2
 exp_classical_evals = np.exp(-complex(0,1)*dt*classical_evals) #may be +ve
@@ -250,13 +252,4 @@ file = open("exp_driver_evals.txt",'w')
 for i in range(0,2**n):
         file.write(str(exp_driver_evals[i].real)+','+str(exp_driver_evals[i].imag)+'\n')
 file.close()
-"""
-plt.plot(range(0,2**n),classical_evals)
-
-plt.show()
-"""
-#print(" updated state vector =",statevec)
-
-statevec = np.abs(statevec)
-statevec = statevec**2
 

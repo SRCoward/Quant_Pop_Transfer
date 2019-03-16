@@ -107,6 +107,12 @@ def generate_classical_ham(n, h, J):
     return classical_ham
 
 
+"""
+Generate the driver portion of the hamiltonian ref section 4 of https://arxiv.org/pdf/1807.04792.pdf
+\param n is number of qubits
+\param h vector of coefficients 2**n dim
+\param J matrix of coefficients 2**n x 2**n dim
+"""
 def generate_driver_ham(n, h, J):
     X = [[0, 1], [1, 0]]
     I = np.identity(2)
@@ -140,11 +146,16 @@ def generate_driver_ham(n, h, J):
                     else:
                         hold2 = np.kron(hold2, I)
                 driver_2 += (abs(J[i][j])+1)*hold2
-    #print(driver)
     driver_ham = driver + driver_2
     return driver_ham
 
 
+"""
+single_BF_steepest_descent - computes a steepest descent optimisation initialised from start_state
+This locates the local minima which the starting state will lead to following single bit flips
+\param classical_evals - vector of classical evals
+\param start_state - state number of the initial state
+"""
 def single_BF_steepest_descent(ham, start_state):
     # We compute the local minima of the hamiltonian using steepest descent starting from this initial state
     start_statenum = int(start_state,2)
@@ -181,6 +192,11 @@ def single_BF_steepest_descent(ham, start_state):
     return final_state
 
 
+"""
+generate_local_minia computes all local minima which correspond to an exact state number.
+\param classical_evals - vector of eigenvalues of our classical Hamiltonian
+\param n - number of qubits in the system
+"""
 def generate_local_minima(ham,n):
     minima = []
     for i in range(0,2**n):
@@ -194,8 +210,14 @@ def generate_local_minima(ham,n):
     return minima
 
 
+"""
+evolve - generates the circuit for the evolution operator.
+We generate a qasm script of the circuit and that gets passed to our quest simulator
+We also have the ability to simulate our circuit using this model but the simulator is much slower
+"""
 def evolve(n,evo_time,num_time_slices,expansion_order):
     print("n=",n)
+    # Problem setuo
     gamma = 0.2
     marked_bonds = generate_marked_bonds(n)
     #print(marked_bonds)
@@ -208,29 +230,29 @@ def evolve(n,evo_time,num_time_slices,expansion_order):
         minima.append(int(string,2))
 
     #print(minima)
-    qubit_op = Operator(matrix=classical_ham)
+    qubit_op = Operator(matrix=classical_ham) # create the classical operator, which we measure evals of
     # Construct the evolution operator object which we evolve with
-    evo_op = Operator(matrix=(classical_ham+gamma*driver_ham))
-    # Construct the initial state (first marked state a good choice as must start in marked state)
+    evo_op = Operator(matrix=(classical_ham+gamma*driver_ham)) # add to it the driver to form the operator we actually evolve with
     start_index = randint(0,len(local_min)-1)
     state_num = int(local_min[start_index],2)
     state = np.zeros(2**n)
     state[state_num] = 1
     print("initial state of the evolution =", state_num)
+    # initialise the circuit
     initial_state = Custom(n,'uniform',state)
-    #initial_state = Zero(n)
-    #evo_time = 100 # evolution time needs to be set sufficiently large
-    #num_time_slices = 50
+
 
     # expansion order can be toggled in order to speed up calculations
-    # Compute the evolution circuit
-
+    # Create the evolution of hamiltonian object
     eoh = EOH(qubit_op,initial_state,evo_op, 'paulis', evo_time, num_time_slices, expansion_mode='trotter',expansion_order=expansion_order)
 
+
     circtime = time.time()
+    # construct the circuit
     circ = eoh.construct_circuit()
     circtime = time.time() - circtime
     qasmtime = time.time()
+    # generate the qasm data
     qasm = circ.qasm()
     qasmtime = time.time() - qasmtime
     print("circuit construction time = ",circtime," qasm write time = ",qasmtime)
@@ -242,7 +264,8 @@ def evolve(n,evo_time,num_time_slices,expansion_order):
         file.write(str(energy_i)+'\n')
     file.write(qasm)
     file.close()
-    
+
+    # Here is where we cam actually use the inbuilt qiskit simulator
     """
     backend = LegacySimulators.get_backend('statevector_simulator') # only the statevector_simulator works
     quantum_instance = QuantumInstance(shots=1024, backend = backend, pass_manager=PassManager())
@@ -270,7 +293,9 @@ def evolve(n,evo_time,num_time_slices,expansion_order):
 
     plt.show()
     """
-num_qubits=10
+
+# Run the actual construction and time
+num_qubits=4
 timings = open("timing.csv","a")
 start_time = time.time()
 evolve(num_qubits,4,50,1)
