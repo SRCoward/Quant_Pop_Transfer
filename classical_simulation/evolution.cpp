@@ -71,7 +71,7 @@ void read_in_evals(int n,vector<complex<long double>> &exp_classical_evals,vecto
 	inFile2.close();
 }
 
-void generate_evals(int n, vector<complex<long double>> &exp_classical_evals,vector<complex<long double>> &exp_driver_evals, long double gamma,long double dt){
+void generate_evals(int n, vector<double> &classical_evals, vector<complex<long double>> &exp_classical_evals,vector<complex<long double>> &exp_driver_evals, long double gamma,long double dt){
 	int marked = n/2;
 	int vec_len = pow(2,n);
 	srand(time(NULL)); //initialise random seed
@@ -121,11 +121,48 @@ void generate_evals(int n, vector<complex<long double>> &exp_classical_evals,vec
 				drive_eval+=(1+abs(J[j][k]))*pow(-1,bin_ij+bin_ik);
 			}
 		}
+		classical_evals.push_back(class_eval);
 		exp_classical_evals.push_back(exp(minus_i*dt*class_eval));
 		exp_driver_evals.push_back(exp(minus_i*gamma*dt*drive_eval));
 		}
 
 }
+
+
+/*
+Will compute a single bit flip steepest descent optimisation starting from statenum and will return corresponding minima state number
+*/
+int steepest_descent(int n, vector<double> &classical_evals, int statenum){
+	int hold_state=statenum;
+	int min_state=statenum;
+	int vec_len = pow(2,n);
+	double old_energy = classical_evals[statenum]+1;
+	double new_energy = classical_evals[statenum]; //to ensure the first loop runs
+	while (old_energy != new_energy ){
+		cout<<"old_energy="<<old_energy<<"new_energy="<<new_energy<<endl;
+		old_energy = new_energy;
+		statenum = min_state;
+		int num = statenum;
+		int bin;
+		for (int i  ; i<n ; i++){
+			bin = num % 2;
+			num /= 2;
+			if (bin == 0){
+				hold_state = statenum + pow(2,i);
+			}else{
+				hold_state = statenum - pow(2,i);
+			}
+			if (classical_evals[hold_state]<new_energy){
+				min_state = hold_state;
+				new_energy = classical_evals[hold_state];
+			}
+
+		}
+
+	}
+	return min_state;
+}
+
 
 
 /*
@@ -181,22 +218,28 @@ cout<<"input integer n:"<<endl;
 n=15;
 int vec_length = pow(2,n);
 
-ifstream inFile("classical_evals.txt");
+//ifstream inFile("classical_evals.txt");
 vector<string> energies(vec_length);
 // we read in the classical energies
-for (size_t j=0; j<vec_length; j++){
-	getline(inFile,energies[j]);
-}
-inFile.close();
+//for (size_t j=0; j<vec_length; j++){
+//	getline(inFile,energies[j]);
+//}
+//inFile.close();
 cout<<"input start state num:"<<endl;
-cin>>start_state_num; // we input the start_state_num at runtime
+//cin>>start_state_num; // we input the start_state_num at runtime
 
-vector<complex<long double>> statevec(vec_length,0);
-statevec.at(start_state_num)=1;
 
+vector<double> classical_evals;
 vector<complex<long double>>exp_classical_evals;
 vector<complex<long double>>exp_driver_evals;
-generate_evals(n,exp_classical_evals,exp_driver_evals,0.2,0.08);
+generate_evals(n,classical_evals, exp_classical_evals,exp_driver_evals,0.2,0.08);
+srand(time(NULL));
+int random_start_state = rand() % vec_length;
+int starting_minima = steepest_descent(n,classical_evals,random_start_state);
+cout<<"starting minima "<<starting_minima<<endl;
+vector<complex<long double>> statevec(vec_length,0);
+statevec.at(starting_minima)=1;
+
 //read_in_evals(n,exp_classical_evals,exp_driver_evals);
 clock_t total_time = clock();
 // This is the main evolution loop. We compute 50 Trotter steps, recursively.
@@ -210,25 +253,22 @@ total_time = clock() - total_time;
 
 // Write our results to results.csv which get used to plot the date
 ofstream outFile("results.csv");
-string round_energy = energies.at(start_state_num);
-round_energy = round_energy.substr(0,7); // we truncate the energies
+
 // We insert the energy of the starting state number at the top of our file to mark it as 'special'
 double amps;
-amps = pow(real(statevec[start_state_num]),2)+pow(imag(statevec[start_state_num]),2);
-outFile<<round_energy<<','<<amps<<endl;
+amps = pow(real(statevec[starting_minima]),2)+pow(imag(statevec[starting_minima]),2);
+outFile<<classical_evals[starting_minima]<<','<<amps<<endl;
 
 for (size_t i=0 ; i<vec_length ; i++){
-	round_energy = energies.at(i);
-	round_energy = round_energy.substr(0,7);
 	amps = pow(real(statevec[i]),2)+pow(imag(statevec[i]),2);
-	outFile<<round_energy<<','<<amps<<endl;
+	outFile<<classical_evals[i]<<','<<amps<<endl;
 
 }
 outFile.close();
-
+/*
 // Output the timing data, which gets used to generate the plot in the report.
 ofstream timeFile("timings.csv",ofstream::app);
 timeFile<<"("<<n<<","<<((float)total_time)/CLOCKS_PER_SEC<<")"<<endl;
 timeFile.close();
-
+*/
 }

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+export OMP_NUM_THREADS=2
+echo "Input integer number of qubits n"
+read num
+echo "recieved input ${num}"
+sed -i "s/n=[0-9]*/n=${num}/g" evolution.cpp
+g++ -O3 --std=c++11 -o myExecutable evolution.cpp
+time ./myExecutable
+echo -e "\nInput integer start state"
+read state
+echo "received input ${state}"
+sed -i "s/start_state=[0-9]*/start_state=${state}/g" hamming_plot.py
+sed -i "s/num_qubits=[0-9]*/num_qubits=${num}/g" hamming_plot.py
+python3 plot_data.py
+python3 hamming_plot.py

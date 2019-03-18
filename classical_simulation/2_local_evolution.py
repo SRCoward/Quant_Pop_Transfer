@@ -221,7 +221,7 @@ def process_input(i, statevec, exp_driver_evals, exp_classical_evals):
 
 
 # Problem setup
-n=3
+n=15
 bonds = generate_marked_bonds(n)
 h,J = generate_h_J(n,bonds)
 eval_time = time.time()
